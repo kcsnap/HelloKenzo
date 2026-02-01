@@ -1,6 +1,24 @@
+using HelloKenzo.Web.Data;
+using HelloKenzo.Web.Interfaces;
+using HelloKenzo.Web.Models;
+using HelloKenzo.Web.Services;
+using Microsoft.EntityFrameworkCore;
+
 var builder = WebApplication.CreateBuilder(args);
-builder.Services.AddSingleton<IRegistrationService, RegistrationService>();
+
+builder.Services.AddDbContext<AppDbContext>(options =>
+    options.UseSqlite("Data Source=HelloKenzo.db"));
+
+builder.Services.AddScoped<IRegistrationService, RegistrationService>();
+
 var app = builder.Build();
+
+// Ensure database is created
+using (var scope = app.Services.CreateScope())
+{
+    var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+    db.Database.EnsureCreated();
+}
 
 app.UseDefaultFiles();
 app.UseStaticFiles();
@@ -17,21 +35,9 @@ app.MapPost("/api/register", (RegistrationRequest request, IRegistrationService 
     return Results.BadRequest(new { success = false, message = "Registration failed. Name must be 'Kenzo'." });
 });
 
+app.MapGet("/api/registrations", (AppDbContext db) =>
+{
+    return Results.Ok(db.Registrations.ToList());
+});
+
 app.Run();
-
-public record RegistrationRequest(string Name, string Email);
-
-public interface IRegistrationService
-{
-    bool Register(RegistrationRequest request);
-}
-
-public class RegistrationService : IRegistrationService
-{
-    public bool Register(RegistrationRequest request)
-    {
-        Console.WriteLine($"Registration received: Name={request.Name}, Email={request.Email}");
-
-        return string.Equals(request.Name, "Kenzo", StringComparison.OrdinalIgnoreCase);
-    }
-}

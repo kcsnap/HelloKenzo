@@ -5,3 +5,6 @@ obj/
 .vs/
 *.dll
 *.pdb
+*.db
+*.db-shm
+*.db-wal
